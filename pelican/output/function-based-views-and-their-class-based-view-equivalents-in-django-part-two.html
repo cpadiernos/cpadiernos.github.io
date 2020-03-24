@@ -145,7 +145,7 @@ Create a <em>forms.py</em> file in the <em>toys</em> application. Note we'll be 
 # toy_form.html
 
 <span class="p">&lt;</span><span class="nt">form</span> <span class="na">action</span><span class="o">=</span><span class="s">&quot;&quot;</span> <span class="na">method</span><span class="o">=</span><span class="s">&quot;post&quot;</span><span class="p">&gt;</span>
-  # make sure to include {% csrf_token %}
+  # make sure to include the csrf_token here
   {{ form.as_p }}
   <span class="p">&lt;</span><span class="nt">input</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;submit&quot;</span> <span class="na">value</span><span class="o">=</span><span class="s">&quot;Submit&quot;</span><span class="p">&gt;</span>
 <span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span>
@@ -253,7 +253,7 @@ Create a <em>forms.py</em> file in the <em>toys</em> application. Note we'll be 
 # toy_confirm_delete.html
 
 <span class="p">&lt;</span><span class="nt">form</span> <span class="na">method</span><span class="o">=</span><span class="s">&quot;POST&quot;</span><span class="p">&gt;</span> 
-  # make sure to include {% csrf_token %}
+  # make sure to include the csrf_token here
   Are you sure you want to delete this item? 
   <span class="p">&lt;</span><span class="nt">input</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;submit&quot;</span> <span class="na">value</span><span class="o">=</span><span class="s">&quot;Yes&quot;</span> <span class="p">/&gt;</span> 
 <span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span> 

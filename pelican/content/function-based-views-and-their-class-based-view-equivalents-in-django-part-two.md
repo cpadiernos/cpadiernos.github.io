@@ -127,7 +127,7 @@ Create *toy_form.html* and place it in the *'toys/templates/toys/'* folder:
 # toy_form.html
 
 <form action="" method="post">
-  # make sure to include {% csrf_token %}
+  # make sure to include the csrf_token here
   {{ form.as_p }}
   <input type="submit" value="Submit">
 </form>
@@ -244,7 +244,7 @@ You'll need to make an html file to confirm the deletion:
 # toy_confirm_delete.html
 
 <form method="POST"> 
-  # make sure to include {% csrf_token %}
+  # make sure to include the csrf_token here
   Are you sure you want to delete this item? 
   <input type="submit" value="Yes" /> 
 </form> 
