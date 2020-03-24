@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>Carol Padiernos's Blog - Django</title>
+        <link href="https://fonts.googleapis.com/css?family=Cabin|Roboto:400,700|Roboto+Condensed:400,700" rel="stylesheet">
+        <link rel="stylesheet" href="/theme/css/main.css" />
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="/">Carol Padiernos's Blog</a></h1>
+                <nav><ul>
+                    <li><a href="/category/django.html">Django</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+
+            <aside id="featured" class="body">
+                <article>
+                    <h1 class="entry-title"><a href="/function-based-views-and-their-class-based-view-equivalents-in-django-part-two.html">Function based views and their class based view equivalents in Django (Pt 2)</a></h1>
+<footer class="post-info">
+        <abbr class="published" title="2020-03-23T14:29:00-04:00">
+                Published: Mon 23 March 2020
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/carol-padiernos.html">Carol Padiernos</a>
+        </address>
+<p>In <a href="/category/django.html">Django</a>.</p>
+<p>tags: <a href="/tag/django.html">Django</a> </p>
+</footer><!-- /.post-info --><p>This article assumes you've done a tutorial in Django, are comfortable using function based views and want to start using class based views in your project. I'll be discussing function based views and their equivalent class based views when working with forms. This includes creating, updating, and deleting objects, intializing forms, and manipulating data after a form's data is found to be valid.</p><p>We're continuing with our <em>toys</em> application from <a href="https://cpadiernos.github.io/function-based-views-and-their-class-based-view-equivalents-in-django-part-one.html">Function based views and their class based view equivalents in Django (Pt 1)</a></p>
+<h1>Create</h1>
+<p>Add the below paths to the <em>toys</em> application <em>urls.py</em> file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/new/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">create_toy</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-create&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/new/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">ToyCreateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+       <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-create&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Put all the paths in this article BEFORE <em>path('fbv-toys/&lt;str:username>/',...)</em> from the previous article.</p>
+<hr>
+<p><br/>
+Create a <em>forms.py</em> file in the <em>toys</em> application. Note we'll be using a <em>ModelForm</em>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># forms.py</span>
+
+<span class="kn">from</span> <span class="nn">django</span> <span class="kn">import</span> <span class="n">forms</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Toy</span>
+
+<span class="k">class</span> <span class="nc">ToyForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;owner&#39;</span><span class="p">,</span> <span class="s1">&#39;is_birthday_present&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p>Make the views that plan to use that form:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">redirect</span>
+
+<span class="kn">from</span> <span class="nn">.forms</span> <span class="kn">import</span> <span class="n">ToyForm</span>
+
+<span class="k">def</span> <span class="nf">create_toy</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;fbv-toy-list&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_form.html&#39;</span> <span class="p">,</span> <span class="p">{</span><span class="s1">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse_lazy</span>
+<span class="kn">from</span> <span class="nn">django.views.generic.edit</span> <span class="kn">import</span> <span class="n">CreateView</span>
+
+<span class="k">class</span> <span class="nc">ToyCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ToyForm</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span> <span class="c1"># you can also simply put &#39;/cbv-toys/&#39; but its better practice to reference the url name</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_form.html&#39;</span>
+
+<span class="c1"># alternate class based view</span>
+
+<span class="k">class</span> <span class="nc">ToyCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;owner&#39;</span><span class="p">,</span> <span class="s1">&#39;is_birthday_present&#39;</span><span class="p">)</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span> 
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_form.html&#39;</span>
+
+<span class="c1"># another alternate class based view</span>
+
+<span class="k">class</span> <span class="nc">ToyCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ToyForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_form.html&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_success_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">reverse</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p>For the class based view, you don't have to specify a <strong>form_class</strong>, and you can simply use the <strong>fields</strong> field to specify the fields you want.</p>
+<p>For our class based view, notice we are specifying our <strong>success_url</strong> and using <em>reverse_lazy</em>. We can also simply use the url path, ie. '/cbv-toys/'. Alternatively we can override the <strong>get_success_url</strong> method if we plan to do anything more fancy. i.e. grabbing the pk in the url to use in the redirect url.</p>
+<p>After successful creation, the class based view defaults to calling the <strong>get_absolute_url</strong> method defined in your model, so if you do not want to include a <strong>success_url</strong> in your view, then update your model to include the below. This will redirect us to the detail page of our newly created object.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># models.py</span>
+
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse</span>
+
+<span class="k">class</span> <span class="nc">Toy</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">User</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">SET_NULL</span><span class="p">,</span>
+        <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;toys&#39;</span><span class="p">)</span>
+    <span class="n">is_birthday_present</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_absolute_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">reverse</span><span class="p">(</span><span class="s1">&#39;cbv-toy-detail&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;toy_pk&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pk</span><span class="p">})</span>
+</code></pre></div>
+
+
+<p>Lastly, the class based view defaults to looking up <strong>&lt;model_name>_form.html</strong>, i.e. in our case <em>toy_form.html</em>, so you don't have to specify the <strong>template_name</strong> unless you plan to name your file differently.</p>
+<p>Create <em>toy_form.html</em> and place it in the <em>'toys/templates/toys/'</em> folder:</p>
+<div class="highlight"><pre><span></span><code># in &#39;toys/templates/toys/&#39;
+# toy_form.html
+
+<span class="p">&lt;</span><span class="nt">form</span> <span class="na">action</span><span class="o">=</span><span class="s">&quot;&quot;</span> <span class="na">method</span><span class="o">=</span><span class="s">&quot;post&quot;</span><span class="p">&gt;</span>
+  # make sure to include {% csrf_token %}
+  {{ form.as_p }}
+  <span class="p">&lt;</span><span class="nt">input</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;submit&quot;</span> <span class="na">value</span><span class="o">=</span><span class="s">&quot;Submit&quot;</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Remember to include &lt;form> and &lt;/form> and the &lt;input> button with your {{form}}.</p>
+<hr>
+<p><br/></p>
+<h1>Update</h1>
+<p>Add more paths to your <em>urls.py</em> file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/&lt;int:toy_pk&gt;/edit/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">update_toy</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-update&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/&lt;int:toy_pk&gt;/edit/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">ToyUpdateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-update&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>We'll use the same form we used before, i.e. ToyForm.</p>
+<p>Add these views:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="k">def</span> <span class="nf">update_toy</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">toy_pk</span><span class="p">):</span>
+    <span class="n">toy</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Toy</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">toy_pk</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">toy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;fbv-toy-list&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">toy</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_form.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.views.generic.edit</span> <span class="kn">import</span> <span class="n">UpdateView</span>
+
+<span class="k">class</span> <span class="nc">ToyUpdateView</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ToyForm</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span>
+    <span class="n">pk_url_kwarg</span> <span class="o">=</span> <span class="s1">&#39;toy_pk&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_form.html&#39;</span>
+</code></pre></div>
+
+
+<p>As with DetailView, for CreateView the default <strong>pk_url_kwarg</strong> is <strong>'pk'</strong> and you'll have to set path to <em>('cbv-toys/&lt;int:pk>/edit/'....)</em> if you don't want to specify. In our case, we specified <em>'toy_pk'</em> and so we set path to <em>('cbv-toys/&lt;int:toy_pk>/edit/'....)</em>.</p>
+<p>Like above, you can define <strong>form_class</strong>, or specify fields in <strong>fields</strong>. You can specifying the <strong>success_url</strong> using <em>reverse_lazy</em> or use url path, or override the <strong>get_success_url</strong>. Also like above, after successful creation, the class based view defaults to calling the <strong>get_absolute_url</strong> method defined in your model, and it defaults to looking up <strong>&lt;model_name>_form.html</strong>.
+<br/>
+<br/></p>
+<h1>Delete</h1>
+<p>Set up the paths:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/&lt;int:toy_pk&gt;/delete/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">delete_toy</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-delete&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/&lt;int:toy_pk&gt;/delete/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">ToyDeleteView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-delete&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>No forms are needed since we are deleting an item.</p>
+<p>Update the views:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views</span>
+
+<span class="c1"># function based view</span>
+
+<span class="k">def</span> <span class="nf">delete_toy</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">toy_pk</span><span class="p">):</span>
+    <span class="n">toy</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Toy</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">toy_pk</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">toy</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_confirm_delete.html&#39;</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.views.generic.edit</span> <span class="kn">import</span> <span class="n">DeleteView</span>
+
+<span class="k">class</span> <span class="nc">ToyDeleteView</span><span class="p">(</span><span class="n">DeleteView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">pk_url_kwarg</span> <span class="o">=</span> <span class="s1">&#39;toy_pk&#39;</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_confirm_delete.html&#39;</span>
+</code></pre></div>
+
+
+<p>The default <strong>pk_url_kwarg</strong> is <strong>'pk'</strong> and you'll have to set path to <em>('cbv-toys/&lt;int:pk>/delete/'....)</em> if you don't want to specify.</p>
+<p>The default template is <strong>&lt;model_name>_confirm_delete.html</strong> so you don't have to specify.</p>
+<p>It is <em>required</em> to specify the <strong>success_url</strong> (or override the <strong>get_success_url</strong>) because you will get an error if there isn't something there.</p>
+<p>You'll need to make an html file to confirm the deletion:</p>
+<div class="highlight"><pre><span></span><code># in &#39;toys/templates/toys/&#39;
+# toy_confirm_delete.html
+
+<span class="p">&lt;</span><span class="nt">form</span> <span class="na">method</span><span class="o">=</span><span class="s">&quot;POST&quot;</span><span class="p">&gt;</span> 
+  # make sure to include {% csrf_token %}
+  Are you sure you want to delete this item? 
+  <span class="p">&lt;</span><span class="nt">input</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;submit&quot;</span> <span class="na">value</span><span class="o">=</span><span class="s">&quot;Yes&quot;</span> <span class="p">/&gt;</span> 
+<span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span> 
+</code></pre></div>
+
+
+<p><br/></p>
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Remember to include &lt;form> and &lt;/form> and the &lt;input> button with your {{form}}.</p>
+<hr>
+<p><br/></p>
+<h1>Initial values</h1>
+<p>Let's make all of the newly created toys legos unless the input is changed.</p>
+<p>Add your urls:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/new-lego/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">create_lego_toy</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-create-lego&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/new-lego/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">LegoToyCreateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-create-lego&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>Add to the <em>toys</em> application <em>views.py</em> file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="k">def</span> <span class="nf">create_lego_toy</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;fbv-toy-list&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">initial</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;lego&#39;</span>
+        <span class="p">}</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="n">initial</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_form.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+
+<span class="c1"># class based view</span>
+
+<span class="k">class</span> <span class="nc">LegoToyCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ToyForm</span>
+    <span class="n">initial</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;lego&#39;</span><span class="p">}</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span>
+
+<span class="c1"># alternate class based view</span>
+
+<span class="k">class</span> <span class="nc">LegoToyCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ToyForm</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_initial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;lego&#39;</span><span class="p">}</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h1>Making changes after validation</h1>
+<p>Let's make all newly created toys marked as birthday presents once submitted.</p>
+<p>Update your <em>urls.py</em> file:</p>
+<div class="highlight"><pre><span></span><code><span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/new-birthday/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">create_birthday_toy</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-create-birthday&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/new-birthday/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">BirthdayToyCreateView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbc-toy-create-birtday&#39;</span><span class="p">)</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>Then <em>views.py</em>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="k">def</span> <span class="nf">create_birthday_toy</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">toy</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">toy</span><span class="o">.</span><span class="n">is_birthday_present</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">toy</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;fbv-toy-list&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ToyForm</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_form.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span>
+
+<span class="c1"># class based view</span>
+
+<span class="k">class</span> <span class="nc">BirthdayToyCreateView</span><span class="p">(</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">ToyForm</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">is_birthday_present</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+</code></pre></div>                </article>
+            </aside><!-- /#featured -->
+                <section id="content" class="body">
+                    <h1>Other articles</h1>
+                    <hr />
+                    <ol id="posts-list" class="hfeed">
+
+            <li><article class="hentry">
+                <header>
+                    <h1><a href="/how-to-include-an-imagefield-in-a-django-model.html" rel="bookmark"
+                           title="Permalink to How to include an ImageField in a Django Model">How to include an ImageField in a Django Model</a></h1>
+                </header>
+
+                <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2020-03-12T19:01:00-04:00">
+                Published: Thu 12 March 2020
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/carol-padiernos.html">Carol Padiernos</a>
+        </address>
+<p>In <a href="/category/django.html">Django</a>.</p>
+<p>tags: <a href="/tag/django.html">Django</a> </p>
+</footer><!-- /.post-info -->                <p>This article assumes you've done a beginner's tutorial on Django and now you want to include an image field in your project. I'll go over how to customize where to save your images and how to serve them in development. I'll also provide implementation details for showing the image on a public facing site.</p>
+                <a class="readmore" href="/how-to-include-an-imagefield-in-a-django-model.html">read more</a>
+                </div><!-- /.entry-content -->
+            </article></li>
+
+            <li><article class="hentry">
+                <header>
+                    <h1><a href="/how-to-add-fields-to-the-user-model-in-django.html" rel="bookmark"
+                           title="Permalink to How to add fields to the User model in Django">How to add fields to the User model in Django</a></h1>
+                </header>
+
+                <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2020-03-11T13:06:00-04:00">
+                Published: Wed 11 March 2020
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/carol-padiernos.html">Carol Padiernos</a>
+        </address>
+<p>In <a href="/category/django.html">Django</a>.</p>
+<p>tags: <a href="/tag/django.html">Django</a> </p>
+</footer><!-- /.post-info -->                <p>This article assumes that you've done at least a beginner's tutorial on Django and you want to customize the built-in User model by adding more fields. These fields will be common among all the users. For example, if you want all users to have a "nickname" field, etc. I'll cover how to adjust your Admin views as well so that you can view, update, and add users with those added fields included.</p>
+                <a class="readmore" href="/how-to-add-fields-to-the-user-model-in-django.html">read more</a>
+                </div><!-- /.entry-content -->
+            </article></li>
+
+            <li><article class="hentry">
+                <header>
+                    <h1><a href="/function-based-views-and-their-class-based-view-equivalents-in-django-part-one.html" rel="bookmark"
+                           title="Permalink to Function based views and their class based view equivalents in Django (Pt 1)">Function based views and their class based view equivalents in Django (Pt 1)</a></h1>
+                </header>
+
+                <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2020-03-10T10:00:00-04:00">
+                Published: Tue 10 March 2020
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/carol-padiernos.html">Carol Padiernos</a>
+        </address>
+<p>In <a href="/category/django.html">Django</a>.</p>
+<p>tags: <a href="/tag/django.html">Django</a> </p>
+</footer><!-- /.post-info -->                <p>This article assumes you've done a tutorial in Django, are comfortable using function based views and want to start using class based views in your project. You should also have experience with creating a login for users. I'll give you typical use cases for function based views and discuss their class based view equivalents including: list, detail,login required list, login required detail, filtered list, viewer specific list, logged in users with restricted views list, and lists that have addional context.</p>
+                <a class="readmore" href="/function-based-views-and-their-class-based-view-equivalents-in-django-part-one.html">read more</a>
+                </div><!-- /.entry-content -->
+            </article></li>
+                </ol><!-- /#posts-list -->
+                </section><!-- /#content -->
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>

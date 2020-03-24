@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>How to add fields to the User model in Django</title>
+        <link href="https://fonts.googleapis.com/css?family=Cabin|Roboto:400,700|Roboto+Condensed:400,700" rel="stylesheet">
+        <link rel="stylesheet" href="/theme/css/main.css" />
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="/">Carol Padiernos's Blog</a></h1>
+                <nav><ul>
+                    <li class="active"><a href="/category/django.html">Django</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/how-to-add-fields-to-the-user-model-in-django.html" rel="bookmark"
+           title="Permalink to How to add fields to the User model in Django">How to add fields to the User model in Django</a></h1>
+    </header>
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2020-03-11T13:06:00-04:00">
+                Published: Wed 11 March 2020
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/carol-padiernos.html">Carol Padiernos</a>
+        </address>
+<p>In <a href="/category/django.html">Django</a>.</p>
+<p>tags: <a href="/tag/django.html">Django</a> </p>
+</footer><!-- /.post-info -->      <p>This article assumes that you've done at least a beginner's tutorial on Django and you want to customize the built-in User model by adding more fields. These fields will be common among all the users. For example, if you want all users to have a "nickname" field, etc. I'll cover how to adjust your Admin views as well so that you can view, update, and add users with those added fields included.</p>
+      <h2>Setup</h2>
+<p>Create a project as you normally would:</p>
+<div class="highlight"><pre><span></span><code><span class="go">django-admin startproject myproject</span>
+</code></pre></div>
+
+
+<hr>
+<p><strong>NOTE</strong> </p>
+<p>Do all the following steps BEFORE you do any 'python manage.py makemigrations' or 'python manage.py migrate'!</p>
+<hr>
+<p>Create an application where you want to have your extended User model. In this case, we make an "accounts" application:</p>
+<div class="highlight"><pre><span></span><code><span class="go">cd myproject</span>
+<span class="go">python manage.py startapp accounts</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Models</h2>
+<p>Open your accounts models.py file, and add your User model. In our case, CustomUser:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># models.py</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">AbstractUser</span>
+
+<span class="k">class</span> <span class="nc">CustomUser</span><span class="p">(</span><span class="n">AbstractUser</span><span class="p">):</span>
+    <span class="k">pass</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Settings</h2>
+<p>Add that app to myproject settings.py installed apps:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># settings.py</span>
+
+<span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="o">...</span>
+    <span class="o">...</span>
+    <span class="s1">&#39;accounts&#39;</span><span class="p">,</span> 
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>And then add to the bottom of the same file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># settings.py</span>
+
+<span class="n">AUTH_USER_MODEL</span> <span class="o">=</span> <span class="s1">&#39;accounts.CustomUser&#39;</span>
+</code></pre></div>
+
+
+<hr>
+<p><strong>NOTE</strong></p>
+<p>You can now run 'python manage.py makemigrations' and then 'python manage.py migrate' if you want to add fields later on.</p>
+<hr>
+<p><br/></p>
+<h2>Models</h2>
+<p>To add fields to your model that you want to share among all the users, just include them in the CustomUser model. For example:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># models.py</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">AbstractUser</span>
+
+<span class="k">class</span> <span class="nc">CustomUser</span><span class="p">(</span><span class="n">AbstractUser</span><span class="p">):</span>
+    <span class="n">is_student</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">is_teacher</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">mailing_address</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Admin</h2>
+<p>To be able to see the new CustomUser in the Admin site, you'll need to update your accounts application admin.py file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># admin.py</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">admin</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.admin</span> <span class="kn">import</span> <span class="n">UserAdmin</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">CustomUser</span>
+
+<span class="k">class</span> <span class="nc">CustomUserAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">CustomUser</span><span class="p">,</span> <span class="n">CustomUserAdmin</span><span class="p">)</span>
+</code></pre></div>
+
+
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Don't forget to also 'python manage.py createsuperuser' so you can access the admin.</p>
+<hr>
+<p>You'll notice that the user list view has the usual headings - email address, first name, last name, staff status. </p>
+<p><br/></p>
+<h2>Admin list view</h2>
+<p>To add the fields as additional headings, you can use list_display:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># admin.py</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">admin</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.admin</span> <span class="kn">import</span> <span class="n">UserAdmin</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">CustomUser</span>
+
+<span class="k">class</span> <span class="nc">CustomUserAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
+    <span class="n">list_display</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">,</span> <span class="s1">&#39;first_name&#39;</span><span class="p">,</span> <span class="s1">&#39;last_name&#39;</span><span class="p">,</span> <span class="s1">&#39;is_staff&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;is_teacher&#39;</span><span class="p">,</span> <span class="s1">&#39;is_student&#39;</span><span class="p">,</span> <span class="s1">&#39;mailing_address&#39;</span>
+        <span class="p">)</span>
+
+<span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">CustomUser</span><span class="p">,</span> <span class="n">CustomUserAdmin</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Admin detail view</h2>
+<p>The user detail view will have username, password, first name, last name, email address, active, staff status, superuser status, groups, user permissions, last login, and date joined.</p>
+<p>To add your new fields to the detail view, you'll need to use fieldsets. The below will emulate the original view with the new fields at the bottom.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># admin.py</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">admin</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.admin</span> <span class="kn">import</span> <span class="n">UserAdmin</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">CustomUser</span>
+
+<span class="k">class</span> <span class="nc">CustomUserAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
+    <span class="n">fieldsets</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;password&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Personal info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;first_name&#39;</span><span class="p">,</span> <span class="s1">&#39;last_name&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Permissions&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s1">&#39;is_active&#39;</span><span class="p">,</span> <span class="s1">&#39;is_staff&#39;</span><span class="p">,</span> <span class="s1">&#39;is_superuser&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;groups&#39;</span><span class="p">,</span> <span class="s1">&#39;user_permissions&#39;</span>
+                <span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Important dates&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;last_login&#39;</span><span class="p">,</span> <span class="s1">&#39;date_joined&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Additional info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;is_student&#39;</span><span class="p">,</span> <span class="s1">&#39;is_teacher&#39;</span><span class="p">,</span> <span class="s1">&#39;mailing_address&#39;</span><span class="p">)</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+<span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">CustomUser</span><span class="p">,</span> <span class="n">CustomUserAdmin</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Admin add view</h2>
+<p>When you try to add a user, only username, password and password confirmation are available inputs. To have the new fields included as inputs, you can use add_fieldsets.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># admin.py</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">admin</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.admin</span> <span class="kn">import</span> <span class="n">UserAdmin</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">CustomUser</span>
+
+<span class="k">class</span> <span class="nc">CustomUserAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
+    <span class="n">add_fieldsets</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;password1&#39;</span><span class="p">,</span> <span class="s1">&#39;password2&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Personal info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;first_name&#39;</span><span class="p">,</span> <span class="s1">&#39;last_name&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Permissions&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s1">&#39;is_active&#39;</span><span class="p">,</span> <span class="s1">&#39;is_staff&#39;</span><span class="p">,</span> <span class="s1">&#39;is_superuser&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;groups&#39;</span><span class="p">,</span> <span class="s1">&#39;user_permissions&#39;</span>
+                <span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Important dates&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;last_login&#39;</span><span class="p">,</span> <span class="s1">&#39;date_joined&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Additional info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;is_student&#39;</span><span class="p">,</span> <span class="s1">&#39;is_teacher&#39;</span><span class="p">,</span> <span class="s1">&#39;mailing_address&#39;</span><span class="p">)</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+<span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">CustomUser</span><span class="p">,</span> <span class="n">CustomUserAdmin</span><span class="p">)</span>
+</code></pre></div>
+
+
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Use "password1" and "password2" in "fields" to create and confirm the password.</p>
+<hr>
+<p><br/></p>
+<h2>Admin complete</h2>
+<p>The complete admin file should look like this:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># admin.py</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">admin</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.admin</span> <span class="kn">import</span> <span class="n">UserAdmin</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">CustomUser</span>
+
+<span class="k">class</span> <span class="nc">CustomUserAdmin</span><span class="p">(</span><span class="n">UserAdmin</span><span class="p">):</span>
+    <span class="n">list_display</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">,</span> <span class="s1">&#39;first_name&#39;</span><span class="p">,</span> <span class="s1">&#39;last_name&#39;</span><span class="p">,</span> <span class="s1">&#39;is_staff&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;is_teacher&#39;</span><span class="p">,</span> <span class="s1">&#39;is_student&#39;</span><span class="p">,</span> <span class="s1">&#39;mailing_address&#39;</span>
+        <span class="p">)</span>
+
+    <span class="n">fieldsets</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;password&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Personal info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;first_name&#39;</span><span class="p">,</span> <span class="s1">&#39;last_name&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Permissions&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s1">&#39;is_active&#39;</span><span class="p">,</span> <span class="s1">&#39;is_staff&#39;</span><span class="p">,</span> <span class="s1">&#39;is_superuser&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;groups&#39;</span><span class="p">,</span> <span class="s1">&#39;user_permissions&#39;</span>
+                <span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Important dates&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;last_login&#39;</span><span class="p">,</span> <span class="s1">&#39;date_joined&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Additional info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;is_student&#39;</span><span class="p">,</span> <span class="s1">&#39;is_teacher&#39;</span><span class="p">,</span> <span class="s1">&#39;mailing_address&#39;</span><span class="p">)</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+    <span class="n">add_fieldsets</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;password1&#39;</span><span class="p">,</span> <span class="s1">&#39;password2&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Personal info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;first_name&#39;</span><span class="p">,</span> <span class="s1">&#39;last_name&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Permissions&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s1">&#39;is_active&#39;</span><span class="p">,</span> <span class="s1">&#39;is_staff&#39;</span><span class="p">,</span> <span class="s1">&#39;is_superuser&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;groups&#39;</span><span class="p">,</span> <span class="s1">&#39;user_permissions&#39;</span>
+                <span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Important dates&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;last_login&#39;</span><span class="p">,</span> <span class="s1">&#39;date_joined&#39;</span><span class="p">)</span>
+        <span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Additional info&#39;</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;fields&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;is_student&#39;</span><span class="p">,</span> <span class="s1">&#39;is_teacher&#39;</span><span class="p">,</span> <span class="s1">&#39;mailing_address&#39;</span><span class="p">)</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+<span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">CustomUser</span><span class="p">,</span> <span class="n">CustomUserAdmin</span><span class="p">)</span>
+</code></pre></div>
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>
