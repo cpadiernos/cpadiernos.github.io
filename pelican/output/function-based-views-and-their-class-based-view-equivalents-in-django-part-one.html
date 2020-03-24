@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>Function based views and their class based view equivalents in Django (Pt 1)</title>
+        <link href="https://fonts.googleapis.com/css?family=Cabin|Roboto:400,700|Roboto+Condensed:400,700" rel="stylesheet">
+        <link rel="stylesheet" href="/theme/css/main.css" />
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="/">Carol Padiernos's Blog</a></h1>
+                <nav><ul>
+                    <li class="active"><a href="/category/django.html">Django</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/function-based-views-and-their-class-based-view-equivalents-in-django-part-one.html" rel="bookmark"
+           title="Permalink to Function based views and their class based view equivalents in Django (Pt 1)">Function based views and their class based view equivalents in Django (Pt 1)</a></h1>
+    </header>
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2020-03-10T10:00:00-04:00">
+                Published: Tue 10 March 2020
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/carol-padiernos.html">Carol Padiernos</a>
+        </address>
+<p>In <a href="/category/django.html">Django</a>.</p>
+<p>tags: <a href="/tag/django.html">Django</a> </p>
+</footer><!-- /.post-info -->      <p>This article assumes you've done a tutorial in Django, are comfortable using function based views and want to start using class based views in your project. You should also have experience with creating a login for users. I'll give you typical use cases for function based views and discuss their class based view equivalents including: list, detail,login required list, login required detail, filtered list, viewer specific list, logged in users with restricted views list, and lists that have addional context.</p>
+      <h2>Setup</h2>
+<p>Create a project and application as you normally would. In our case, we are making a <em>toys</em> application.</p>
+<div class="highlight"><pre><span></span><code><span class="go">django-admin startproject myproject</span>
+<span class="go">cd myproject</span>
+<span class="go">python manage.py startapp toys</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Models</h2>
+<p>Create the model by opening up your <em>toys</em> application <em>models.py</em> file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># models.py</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">models</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">User</span>
+
+<span class="k">class</span> <span class="nc">Toy</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">User</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">SET_NULL</span><span class="p">,</span>
+        <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;toys&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&#39;</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Do the usual - update admin.py file to register the Toy model, add toy application to settings.py file, 'python manage.py makemigrations', 'python manage.py migrate', 'python manage.py createsuperuser'.</p>
+<hr>
+<p><br/>
+Create a couple of toys with users/owners. Make some usernames that start with the letter "t" because we'll work with them later.</p>
+<h2>Urls</h2>
+<p>Our set up will involve having a separate <em>urls.py</em> file for the <em>toys</em> application, so set up the <em>myproject</em> project <em>urls.py</em> file to include the below:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">path</span><span class="p">,</span> <span class="n">include</span>
+
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="o">...</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="s1">&#39;toys.urls&#39;</span><span class="p">)),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>List (anyone can see the toys)</h2>
+<h3>Urls</h3>
+<p>Create a <em>toys</em> application <em>urls.py</em> file and add the following:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">path</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">views</span>
+
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">toy_list</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv=toy-list&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">ToyListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<h3>Views</h3>
+<p><em>Toys</em> application <em>views.py</em> file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Toy</span>
+
+<span class="k">def</span> <span class="nf">toy_list</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_list&#39;</span> <span class="p">:</span> <span class="n">toy_list</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.views</span> <span class="kn">import</span> <span class="n">generic</span>
+
+<span class="k">class</span> <span class="nc">ToyListView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+</code></pre></div>
+
+
+<p>In the class based view, the default <strong>context_object_name</strong> is <strong>'&lt;lowercase_model_class_name>_list'</strong> i.e. 'toy_list' in our case, so we don't need to specify. However, it's good practice to name it.</p>
+<p>Also in the class based view, the default <strong>template_name</strong> is <strong>'&lt;app_name>/&lt;lowercase_model_class_name>_list.html'</strong>, i.e. 'toys/toy_list.html' in our case, so we don't need to specify. If we specify a <em>template_name</em>, it will look for that template. If we specify a <em>template_name</em> that doesn't exist, the class based view will still look for the default <em>&lt;app_name>/&lt;lowercase_model_class_name>_list.html</em>.</p>
+<h3>Templates</h3>
+<p>Our <em>context/context_object_name</em> is the same for both views so we can use the same template. Create the below <em>toy_list.html</em> file and place it in <em>'toys/templates/toys'</em> folder, where the first 'toys' is our application folder.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># under &#39;toys/templates/toys&#39;</span>
+<span class="c1"># toy_list.html</span>
+
+<span class="p">{</span><span class="o">%</span> <span class="k">for</span> <span class="n">toy</span> <span class="ow">in</span>  <span class="n">toy_list</span> <span class="o">%</span><span class="p">}</span>
+  <span class="o">&lt;</span><span class="n">ul</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="n">li</span><span class="o">&gt;</span><span class="p">{{</span> <span class="n">toy</span><span class="o">.</span><span class="n">name</span> <span class="p">}}</span> <span class="o">-</span> <span class="p">{{</span> <span class="n">toy</span><span class="o">.</span><span class="n">owner</span> <span class="p">}}</span><span class="o">&lt;/</span><span class="n">li</span><span class="o">&gt;</span>
+  <span class="o">&lt;/</span><span class="n">ul</span><span class="o">&gt;</span>
+<span class="p">{</span><span class="o">%</span> <span class="n">endfor</span> <span class="o">%</span><span class="p">}</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Detail (anyone can see this toy)</h2>
+<h3>Urls</h3>
+<p>Add these paths to the <em>toys</em> application <em>urls.py</em> file. Note I'm just adding them via '+=' on the bottom of my file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/&lt;int:toy_pk&gt;/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">toy_detail</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-detail&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/&lt;int:toy_pk&gt;/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">ToyDetailView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-detail&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<h3>Views</h3>
+<p>Add these views to <em>toys</em> application <em>views.py</em>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">get_object_or_404</span>
+
+<span class="k">def</span> <span class="nf">toy_detail</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">toy_pk</span><span class="p">):</span>
+    <span class="n">toy_detail</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Toy</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">toy_pk</span><span class="p">)</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_detail&#39;</span><span class="p">:</span> <span class="n">toy_detail</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_detail.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="k">class</span> <span class="nc">ToyDetailView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">DetailView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_detail&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_detail.html&#39;</span>
+    <span class="n">pk_url_kwarg</span> <span class="o">=</span> <span class="s1">&#39;toy_pk&#39;</span>
+</code></pre></div>
+
+
+<p>In the class based view, the default <strong>context_object_name</strong> is <strong>&lt;lowercase_model_class_name></strong> i.e. 'toy'. Note it's <strong>not</strong> <em>&lt;lowercase_model_class_name>_detail</em>. I specified 'toy_detail' here though for consistency with the template, which we discuss next.</p>
+<p>Also in the class based view, <strong>template_name</strong> defaults to <strong>'&lt;app_name>/&lt;lowercase_model_class_name>_detail.html'</strong> i.e. 'toys/toy_detail.html' in our case, so we don't need to specify. If we specify a <strong>template_name</strong>, the view will look for that template.</p>
+<p>Unlike the ListView we spoke about earlier, if we specify a <em>template_name</em> that doesn't exist, this class based view will get a TemplateDoesNotExist error.</p>
+<p>Lastly, the default <strong>pk_url_kwarg</strong> is <strong>'pk'</strong> and you'll have to set path to <strong>('cbv-toys/&lt;int:pk>'....)</strong> if you don't want to specify. In our case, we specified <em>'toy_pk'</em> and so we set path to <em>('cbv-toys/&lt;int:toy_pk>'....)</em>.</p>
+<h3>Templates</h3>
+<p>Create another template file called <em>toy_detail.html</em> in the same folder as our <em>toy_list.html</em> and put the below info in it:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># under toys/templates/toys</span>
+<span class="c1"># toy_detail.html</span>
+
+<span class="p">{{</span> <span class="n">toy_detail</span><span class="o">.</span><span class="n">name</span> <span class="p">}}</span> <span class="o">-</span> <span class="p">{{</span> <span class="n">toy_detail</span><span class="o">.</span><span class="n">owner</span> <span class="p">}}</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Login required</h2>
+<hr>
+<p><strong>SHORT VERSION</strong> </p>
+<p>Instead of using <strong>login_required</strong> decorator in function based view, inherit <strong>LoginRequiredMixin</strong> class in the class based view. Make sure it's in <em>leftmost</em> position in the inheritance list!</p>
+<hr>
+<p><br/></p>
+<h2>List that requires login (only the logged in users can see all the toys)</h2>
+<p>To test this out, we'll want to create a way to login with different users. Go to any tutorial, I recommend the <a href="https://developer.mozilla.org/en-US/docs/Learn/Server-side/Django/Authentication">Django Tutorial Part 8: User authentication and permissions</a> on Mozilla. Skip to the section <em>Setting up your authentication views</em>.</p>
+<h3>Urls</h3>
+<p>Add this to the bottom of the <em>toys</em> application <em>urls.py</em> file:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;login-fbv-toys/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">login_required_toy_list</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;login-fbv-toy-list&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;login-cbv-toys/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">LoginRequiredToyListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+       <span class="n">name</span><span class="o">=</span><span class="s1">&#39;login-cbv-toy-list&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<h3>Views</h3>
+<p><em>Toys</em> application <em>views.py</em>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+
+<span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">login_required_toy_list</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_list&#39;</span> <span class="p">:</span> <span class="n">toy_list</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.mixins</span> <span class="kn">import</span> <span class="n">LoginRequiredMixin</span>
+
+<span class="k">class</span> <span class="nc">LoginRequiredToyListView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>Detail that requires login (only logged in users can see this toy)</h2>
+<h3>Urls</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;login-fbv-toys/&lt;int:toy_pk&gt;/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">login_required_toy_detail</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;login-fbv-toy-detail&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;login-cbv-toys/&lt;int:toy_pk&gt;/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">LoginRequiredToyDetailView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;login-cbv-toy-detail&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<h3>Views</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+
+<span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">login_required_toy_detail</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">toy_pk</span><span class="p">):</span>
+    <span class="n">toy_detail</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Toy</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">toy_pk</span><span class="p">)</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_detail&#39;</span><span class="p">:</span> <span class="n">toy_detail</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_detail.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.mixins</span> <span class="kn">import</span> <span class="n">LoginRequiredMixin</span>
+
+<span class="k">class</span> <span class="nc">LoginRequiredToyDetailView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">generic</span><span class="o">.</span><span class="n">DetailView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_detail&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_detail.html&#39;</span>
+    <span class="n">pk_url_kwarg</span> <span class="o">=</span> <span class="s1">&#39;toy_pk&#39;</span>
+</code></pre></div>
+
+
+<p><br/></p>
+<h2>List filtered by object characteristic (only the toys that were given on birthdays)</h2>
+<h3>Models</h3>
+<p>Update <em>toys</em> <em>models.py</em> so that we have another field that we can filter by:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># models.py</span>
+<span class="k">class</span> <span class="nc">Toy</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="n">is_birthday_present</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+
+
+<h2><br/></h2>
+<p><strong>NOTE</strong></p>
+<p>Don't forget to 'python manage.py makemigrations' and 'python manage.py migrate'</p>
+<hr>
+<p><br/></p>
+<h3>Urls</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/birthday/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">toy_list</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-list&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/birthday/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">ToyListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+       <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-list&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<h3>Views</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="k">def</span> <span class="nf">birthday_toy_list</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">birthday_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">is_birthday_present</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_list&#39;</span> <span class="p">:</span> <span class="n">birthday_toy_list</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="k">class</span> <span class="nc">BirthdayToyListView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+    <span class="n">queryset</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">is_birthday_present</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># alternate class based view</span>
+
+<span class="k">class</span> <span class="nc">BirthdayToyListView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">birthday_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">is_birthday_present</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">birthday_toy_list</span>
+</code></pre></div>
+
+
+<p>Notice for both the class based views, you don't have to also specify the model.</p>
+<p><br/></p>
+<h2>List filtered by user (only the toys that a specific kid owns)</h2>
+<h3>Urls</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/&lt;str:username&gt;/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">user_toy_list</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;user-fbv-toy-list&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/&lt;str:username&gt;/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">UserToyListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+       <span class="n">name</span><span class="o">=</span><span class="s1">&#39;user-cbv-toy-list&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<hr>
+<p><strong>NOTE</strong></p>
+<p>You need to put this set of paths <em>AFTER</em> the <em>'cbv-toys/birthday/'</em> path. If placed before, we would encounter <em>'fbv-toys/&lt;str:username>'</em> first and access the view connected to it, <em>user_toy_list</em> and <em>UserToyListView</em> respectively. The view would treat 'birthday' as a username and you would get nothing back.</p>
+<hr>
+<h3>Views</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="k">def</span> <span class="nf">user_toy_list</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+    <span class="n">user_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner__username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_list&#39;</span> <span class="p">:</span> <span class="n">user_toy_list</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="k">class</span> <span class="nc">UserToyListView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">username</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span>
+        <span class="n">user_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner__username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">user_toy_list</span>
+</code></pre></div>
+
+
+<p>Notice this is basically the same as a filtered list, except, for the function based view, we access the username value via the url, and for the class based view, we grab that same value via self.kwargs.</p>
+<p><br/></p>
+<h2>List filtered by viewer (I can only see my own toys)</h2>
+<p>Most likely you'll want to filter the toy list DEPENDING on what user is VIEWING it.</p>
+<h3>Urls</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/my/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">my_toy_list</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my-fbv-toy-list&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/my/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">MyToyListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+       <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my-cbv-toy-list&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Remember to put this BEFORE the <em>'fbv-toys/&lt;str:username>'</em>. Otherwise, you'll be hitting <em>'fbv-toys/&lt;str:username>'</em> first and calling the associated view which will think the username is "my".</p>
+<hr>
+<h3>Views</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="k">def</span> <span class="nf">my_toy_list</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+    <span class="n">my_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner__username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span> <span class="c1"># you can filter by other user fields. ie. owner_id = request.user.id</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_list&#39;</span> <span class="p">:</span> <span class="n">my_toy_list</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="k">class</span> <span class="nc">MyToyListView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">username</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span>
+        <span class="n">my_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner__username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">my_toy_list</span>
+</code></pre></div>
+
+
+<p>Don't forget you need to be logged in. You can combine this with the login_required to make sure it's not an anonymous user. You get no list if you're an anonymous user.
+<br/></p>
+<h2>List filtered by user who passes a certain criteria (only users who are allowed to see all the toys can see the toys)</h2>
+<h3>Urls</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys/secret-club/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">secret_club_toy_list</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;secret-fbv-toy-list&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys/secret-club/&#39;</span><span class="p">),</span> <span class="n">views</span><span class="o">.</span><span class="n">SecretClubToyListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;secret-cbv-toy-list&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<h3>Views</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">user_passes_test</span>
+<span class="kn">from</span> <span class="nn">django.core.exceptions</span> <span class="kn">import</span> <span class="n">PermissionDenied</span>
+
+<span class="k">def</span> <span class="nf">name_check</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+    <span class="c1"># only people whose names start with a t can be in the secret club</span>
+    <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+
+<span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="n">name_check</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">secret_club_toy_list</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">secret_club_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_list&#39;</span><span class="p">:</span> <span class="n">secret_club_toy_list</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.mixins</span> <span class="kn">import</span> <span class="n">UserPassesTestMixin</span>
+
+<span class="k">class</span> <span class="nc">SecretClubToyListView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">UserPassesTestMixin</span><span class="p">,</span> <span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+
+    <span class="k">def</span> <span class="nf">test_func</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># only people whose names start with a t can be in the secret club</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+</code></pre></div>
+
+
+<p>Both the above views will first ask the user to login, and once logged in, it will return PermissionDenied if the user doesn't pass the test.</p>
+<p>If you want to redirect the user after they login but don't pass the test, then you could do the below. In both views we redirect to only show the viewers' toys if they don't belong to the secret club.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">user_passes_test</span>
+
+<span class="k">def</span> <span class="nf">name_check</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+    <span class="c1"># only people whose names start with a t can be in the secret club</span>
+    <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+<span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="n">name_check</span><span class="p">,</span> <span class="n">login_url</span><span class="o">=</span><span class="s1">&#39;/fbv-toys/my/&#39;</span><span class="p">,</span> <span class="n">redirect_field_name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">secret_club_toy_list</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">secret_club_toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;toy_list&#39;</span><span class="p">:</span> <span class="n">secret_club_toy_list</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.mixins</span> <span class="kn">import</span> <span class="n">UserPassesTestMixin</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">redirect</span>
+
+<span class="k">class</span> <span class="nc">SecretClubToyListView</span><span class="p">(</span><span class="n">LoginRequiredMixin</span><span class="p">,</span> <span class="n">UserPassesTestMixin</span><span class="p">,</span> <span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+
+    <span class="k">def</span> <span class="nf">test_func</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># only people whose names start with a t can be in the secret club</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">handle_no_permission</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;my-cbv-toy-list&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">handle_no_permission</span><span class="p">()</span>
+</code></pre></div>
+
+
+<p>In the function based view, notice that <strong>login_url</strong> is the url that the user is redirected to if he/she <strong>DOES NOT PASS</strong> the test. The default is <em>settings.LOGIN_URL</em>.</p>
+<p><strong>redirect_field_name</strong> should be set to None. If it isn't set to none, the "?next=" will be tacked on after the <em>login_url</em>.</p>
+<p>In the class based view, notice the handle_no_permission method. It is called by LoginRequiredMixin first, then by UserPassesTestMixin. So if you want the user to first be directed to the login, then be redirect if it does not pass, then you'll have to set it up like the above.</p>
+<h1>Adding extra context</h1>
+<p>Set up your urls:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;fbv-toys-and-users/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">toy_and_user_list</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;fbv-toy-user-list&#39;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;cbv-toys-and-users/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">ToyUserListView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;cbv-toy-user-list&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>Add some views:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># views.py</span>
+
+<span class="c1"># function based view</span>
+
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">User</span>
+
+<span class="k">def</span> <span class="nf">toy_and_user_list</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">toy_list</span> <span class="o">=</span> <span class="n">Toy</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">user_list</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;toy_list&#39;</span><span class="p">:</span> <span class="n">toy_list</span><span class="p">,</span>
+        <span class="s1">&#39;user_list&#39;</span><span class="p">:</span> <span class="n">user_list</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;toys/toy_list.html&#39;</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+
+<span class="c1"># class based view</span>
+
+<span class="kn">from</span> <span class="nn">django.views</span> <span class="kn">import</span> <span class="n">generic</span>
+
+<span class="k">class</span> <span class="nc">ToyUserListView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+    <span class="n">extra_context</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;user_list&#39;</span><span class="p">:</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()}</span>
+
+<span class="c1"># alternate class based view</span>
+
+<span class="k">class</span> <span class="nc">ToyUserListView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">ListView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Toy</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;toy_list&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;toys/toy_list.html&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="p">[</span><span class="s1">&#39;user_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">context</span>
+</code></pre></div>
+
+
+<p>Update your html so you can see your added context:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># toy_list.html</span>
+
+<span class="n">TOYS</span>
+<span class="p">{</span><span class="o">%</span> <span class="k">for</span> <span class="n">toy</span> <span class="ow">in</span>  <span class="n">toy_list</span> <span class="o">%</span><span class="p">}</span>
+  <span class="o">&lt;</span><span class="n">ul</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="n">li</span><span class="o">&gt;</span><span class="p">{{</span> <span class="n">toy</span><span class="o">.</span><span class="n">name</span> <span class="p">}}</span> <span class="o">-</span> <span class="p">{{</span> <span class="n">toy</span><span class="o">.</span><span class="n">owner</span> <span class="p">}}</span><span class="o">&lt;/</span><span class="n">li</span><span class="o">&gt;</span>
+  <span class="o">&lt;/</span><span class="n">ul</span><span class="o">&gt;</span>
+<span class="p">{</span><span class="o">%</span> <span class="n">endfor</span> <span class="o">%</span><span class="p">}</span>
+
+<span class="n">USERS</span>
+<span class="p">{</span><span class="o">%</span> <span class="k">for</span> <span class="n">user</span> <span class="ow">in</span>  <span class="n">user_list</span> <span class="o">%</span><span class="p">}</span>
+  <span class="o">&lt;</span><span class="n">ul</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="n">li</span><span class="o">&gt;</span><span class="p">{{</span> <span class="n">user</span><span class="o">.</span><span class="n">username</span> <span class="p">}}</span><span class="o">&lt;/</span><span class="n">li</span><span class="o">&gt;</span>
+  <span class="o">&lt;/</span><span class="n">ul</span><span class="o">&gt;</span>
+<span class="p">{</span><span class="o">%</span> <span class="n">endfor</span> <span class="o">%</span><span class="p">}</span>
+</code></pre></div>
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>

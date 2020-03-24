@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <title>How to include an ImageField in a Django Model</title>
+        <link href="https://fonts.googleapis.com/css?family=Cabin|Roboto:400,700|Roboto+Condensed:400,700" rel="stylesheet">
+        <link rel="stylesheet" href="/theme/css/main.css" />
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="/">Carol Padiernos's Blog</a></h1>
+                <nav><ul>
+                    <li class="active"><a href="/category/django.html">Django</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/how-to-include-an-imagefield-in-a-django-model.html" rel="bookmark"
+           title="Permalink to How to include an ImageField in a Django Model">How to include an ImageField in a Django Model</a></h1>
+    </header>
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2020-03-12T19:01:00-04:00">
+                Published: Thu 12 March 2020
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/carol-padiernos.html">Carol Padiernos</a>
+        </address>
+<p>In <a href="/category/django.html">Django</a>.</p>
+<p>tags: <a href="/tag/django.html">Django</a> </p>
+</footer><!-- /.post-info -->      <p>This article assumes you've done a beginner's tutorial on Django and now you want to include an image field in your project. I'll go over how to customize where to save your images and how to serve them in development. I'll also provide implementation details for showing the image on a public facing site.</p>
+      <h2>Setup</h2>
+<p>Create a project like you normally would:</p>
+<div class="highlight"><pre><span></span><code><span class="go">django-admin startproject myproject</span>
+</code></pre></div>
+
+
+<p>Create an application that will have a model that has an image field. In our case, we're doing an "animals" application:</p>
+<div class="highlight"><pre><span></span><code><span class="go">cd myproject</span>
+<span class="go">python manage.py startapp animals</span>
+</code></pre></div>
+
+
+<h2>Model</h2>
+<p>Create a model in the animals application models.py file. Ours will be "Animal":</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># models.py</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">models</span>
+
+<span class="k">class</span> <span class="nc">Animal</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ImageField</span><span class="p">(</span><span class="n">upload_to</span><span class="o">=</span><span class="s1">&#39;animal_images&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&#39;</span>
+</code></pre></div>
+
+
+<p>'animal_images' is the folder where our image will be uploaded to.</p>
+<h2>Requirement</h2>
+<p>ImageField requires the Pillow library so you'll have to install it. On the command line enter:</p>
+<div class="highlight"><pre><span></span><code><span class="go">python -m pip install Pillow</span>
+</code></pre></div>
+
+
+<h2>Storage</h2>
+<p>To customize where the 'animal_images' folder will be, we need to specify the MEDIA_ROOT in myproject settings.py:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># settings.py</span>
+
+<span class="n">MEDIA_ROOT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">BASE_DIR</span><span class="p">,</span> <span class="s1">&#39;myproject/media/&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+
+<p>So our file will end up in 'myproject/media/animal_images/'.</p>
+<h2>Serving</h2>
+<p>To serve the images, we'll use Django's built-in helper function, static(). Add this to the existing myproject urls.py:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span> <span class="nn">django.conf.urls.static</span> <span class="kn">import</span> <span class="n">static</span>
+
+<span class="n">urlpatterns</span> <span class="o">+=</span> <span class="n">static</span><span class="p">(</span>
+    <span class="n">settings</span><span class="o">.</span><span class="n">MEDIA_URL</span><span class="p">,</span> <span class="n">document_root</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">MEDIA_ROOT</span><span class="p">)</span>
+</code></pre></div>
+
+
+<hr>
+<p><strong>NOTE</strong></p>
+<p>django.conf.urls.static.static() is intended only for development! Not for production use.</p>
+<hr>
+<p>To specify the url that serves the image, we need to specify MEDIA_URL in myproject settings.py:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># settings.py</span>
+
+<span class="n">MEDIA_URL</span> <span class="o">=</span> <span class="s1">&#39;/media/&#39;</span>
+</code></pre></div>
+
+
+<p>If we upload an image called "image_file.jpg" via our admin, we can get it at http://127.0.0.1:8000/media/animal_images/image_file.jpg. </p>
+<p>You can just as easily make MEDIA_URL = '/images/' and you'll get your file at http://127.0.0.1:8000/images/animal_images/image_file.jpg</p>
+<hr>
+<p><strong>NOTE</strong></p>
+<p>Don't forget to register the model in the animals admin.py file, add the animals application to the installed apps in myproject settings.py, then 'python manage.py makemigrations', 'python manage.py migrate', and 'python manage.py createsuperuser' before heading to Admin.</p>
+<hr>
+<p><strong>SHORT VERSION</strong></p>
+<h2>Template</h2>
+<p>You can access the image file in the template by using {{ &lt;context_object_name>.&lt;image_field_name>.url }}. I.e.:</p>
+<div class="highlight"><pre><span></span><code><span class="p">&lt;</span><span class="nt">img</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;{{ animal.image.url }}&quot;</span> <span class="na">alt</span><span class="o">=</span><span class="s">&quot;{{ animal.name }} image&quot;</span><span class="p">&gt;</span>
+</code></pre></div>
+
+
+<p>Notice we are accessing the image via its "url" property.</p>
+<p><strong>DETAILS</strong></p>
+<h2>Template</h2>
+<p>To view images on the site, we'll need to create a "templates" folder inside the "animals" application folder. And then another "animals" folder inside that. So you are placing the below html file in "animals/templates/animals". Name the file animal_detail.html:</p>
+<div class="highlight"><pre><span></span><code># animal_detail.html
+
+<span class="p">&lt;</span><span class="nt">h1</span><span class="p">&gt;</span>{{ animal.name }}<span class="p">&lt;/</span><span class="nt">h1</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">img</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;{{ animal.image.url }}&quot;</span> <span class="na">alt</span><span class="o">=</span><span class="s">&quot;{{ animal.name }} image&quot;</span><span class="p">&gt;</span>
+</code></pre></div>
+
+
+<p>Notice we are accessing the image via its "url" property.</p>
+<h2>View</h2>
+<p>We need a view that uses this html, so open up the animals application views.py file, and add the following class based view:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">django.views</span> <span class="kn">import</span> <span class="n">generic</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Animal</span>
+
+<span class="k">class</span> <span class="nc">AnimalDetailView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">DetailView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Animal</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s1">&#39;animal&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;animals/animal_detail.html&#39;</span>
+</code></pre></div>
+
+
+<h2>Url</h2>
+<p>To reach this view, we route our url to it. Create the animals application urls.py file, and add the following:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">path</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">views</span>
+
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;animals/&lt;int:pk&gt;/&#39;</span><span class="p">,</span> <span class="n">views</span><span class="o">.</span><span class="n">AnimalDetailView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;animal-detail&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>Notice that we are accessing the detail view by primary key, pk.</p>
+<p>You'll also need to route your main myprojects urls file to include the animals urls, so add the below to myproject urls.py:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># urls.py</span>
+
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">path</span><span class="p">,</span> <span class="n">include</span>
+
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="o">....</span>
+    <span class="n">path</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="s1">&#39;animals.urls&#39;</span><span class="p">)),</span>
+<span class="p">]</span>
+</code></pre></div>
+
+
+<p>Notice that we updated 'from django.urls import path' to have 'include'.</p>
+<p>If you added your first animal in admin, view it in your site at http://127.0.0.1:8000/animals/1.</p>
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>
